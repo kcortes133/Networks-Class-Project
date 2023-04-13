@@ -1,4 +1,7 @@
+import time
+
 import pandas as pd
+import csv
 import grape
 from embiggen.embedding_transformers import EdgeTransformer
 import numpy as np
@@ -18,13 +21,7 @@ def getGeneMappings():
     return mappingDB[['hgnc_id', 'symbol']]
 
 def graphEmbedding(g):
-    #embedding = get_graph_okapi_tfidf_weighted_textual_embedding(name='Monarch',
-    #                                                             repository='monarchinitiative',
-    #                                                             pretrained_model_name_or_path='allenai/scibert_scivocab_uncased')
-    #embedding = ScoreSPINE().fit_transform(g)
-    #embedding = TransEEnsmallen().fit_transform(g)
     embedding = DeepWalkSkipGramEnsmallen().fit_transform(g)
-    #embedding = FirstOrderLINEEnsmallen().fit_transform(g)
     visualizer = GraphVisualizer(g)
     visualizer.fit_nodes(embedding)
     visualizer.plot_node_types()
@@ -32,7 +29,9 @@ def graphEmbedding(g):
     GraphVisualizer(g).fit_and_plot_all(embedding)
     humanGenes = g.get_node_names_from_node_curie_prefixes(['HGNC'])
     embeddingDF = embedding.get_all_node_embedding()[0]
-    print(embeddingDF)
+    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFIN.csv'
+    embeddingDF.to_csv(embeddingOutFile)
+
     simGenes = cosineSimGenes(embeddingDF, humanGenes)
     simRange = list(simGenes.values())
     plt.hist(simRange)
@@ -42,14 +41,7 @@ def graphEmbedding(g):
         if 'HGNC' in gene[0]:
             print(gene[0])
 
-    et = EdgeTransformer(method='CosineSimilarity', aligned_mapping=True)
-    et.fit(embeddingDF)
-    #print(embeddingDF)
-    #print(et)
-    cosSims = et.transform(sources=embeddingDF.iloc[:,0].to_numpy(), destinations=embeddingDF.iloc[:,0].to_numpy())
-    plt.hist(cosSims)
-    plt.show()
-    return embeddingDF, cosSims
+    return embeddingDF, rankedGenes
 
 def embeddingResults(df, cosSims, g):
     df['CosineSimilarity'] = cosSims
@@ -87,18 +79,13 @@ def pickEmbedding(g):
     plt.show()
 
 
-def getGeneMappings():
-    mappingsF = 'http://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/archive/quarterly/tsv/hgnc_complete_set_2022-04-01.txt'
-    mappingDB = pd.read_csv(mappingsF, sep='\t')
-    return mappingDB[['hgnc_id', 'symbol']]
-
-
 def cosineSimGenes(graph, all_human_genes):
     # ehlers danlos
     eds_curie = "MONDO:0020066"
     # ehlers danlos hypermobility type
     eds4_curie = "MONDO:0007523"
     fa_curie = 'MONDO:0019391'
+    nf_cure = 'MONDO:0021061'
     cosine_sims_eds_vs_genes = {}
     for this_gene_curie in all_human_genes:
         cosine_sims_eds_vs_genes[this_gene_curie] = cosine(graph.loc[eds4_curie], graph.loc[this_gene_curie])
@@ -107,7 +94,40 @@ def cosineSimGenes(graph, all_human_genes):
 
 # get_unchecked_edge_prediction_metrics
 
+def shortestPaths(topGenes, g, destinationNode):
+    # look at what types of nodes are seen most frequelnty
+    # group nodes that go through similar paths
+    # see how many paths are less than length n
+    # nodes with more short paths are less significant
+    topGenesPathInfo = {}
+    for gene in topGenes:
+        topGenesPathInfo[gene] = {}
+        shortestPath = g.get_shortest_path_node_names_from_node_names(
+            src_node_name=gene,
+            dst_node_name="MONDO:0007523")
+        topGenesPathInfo[gene]['Shortest Path'] = shortestPath
+
+        multiShortestPaths = g.get_k_shortest_path_node_names_from_node_names(
+            k=10,
+            src_node_name='HGNC:2201',
+            dst_node_name="MONDO:0007523")
+        topGenesPathInfo[gene]['Multi Shortest Paths'] = multiShortestPaths
+
+        neighborNodes = g.get_neighbour_node_names_from_node_name(
+            node_name='HGNC:9023')
+        topGenesPathInfo[gene]['Neighbors'] = neighborNodes
+
+    return topGenesPathInfo
+
+
+def loadEmbedding(embeddingFile):
+    embeddingDF = pd.read_csv(embeddingFile)
+
+    return embeddingDF
+
+
 def getTopGenes(embeddingDF, g):
+    topGenes = {}
     humanGenes = g.get_node_names_from_node_curie_prefixes(['HGNC'])
     simGenes = cosineSimGenes(embeddingDF, humanGenes)
     simRange = list(simGenes.values())
@@ -116,4 +136,51 @@ def getTopGenes(embeddingDF, g):
     rankedGenes = sorted(simGenes.items(), key=lambda item: item[1], reverse=False)
     for gene in rankedGenes[:100]:
         if 'HGNC' in gene[0]:
-            print(gene[0])
+            topGenes[gene[0]] = gene[1]
+    return topGenes
+
+
+# go through kept edges list
+# see how many of kept edges predicted these are true positives
+
+def evaluateEmbeddings(embedding, removedEdges):
+    truePos = 0
+    with open(embedding, 'r') as f:
+        nodes = list(csv.reader(f, delimiter=','))
+        nodes.pop(0)
+    nodesCoords = {}
+    for node in nodes:
+        nodesCoords[node[0]] = list(map(float,node[1:]))
+
+    with open(removedEdges, 'r') as f:
+        edges = list(csv.reader(f, delimiter=','))
+        edges.pop(0)
+
+    scores = []
+    c = 0
+    notThere = 0
+    for edge in edges:
+        node1 = edge[-1]
+        node2 = edge[-2]
+        if node1 in nodesCoords and node2 in nodesCoords:
+            simScore = cosine(nodesCoords[node1], nodesCoords[node2])
+            scores.append(simScore)
+            if simScore < 0.5: c+=1
+        else: notThere +=1
+
+    # calculate cosine Sim between ALL nodes
+    # get edges predicted to be there
+    # calculate how many removed edges are predicted vs not
+    #
+
+    print(c)
+    print(len(scores))
+    plt.hist(scores)
+    plt.show()
+    return truePos
+
+edgeFile = 'editedMonarchGraphs/graphsEdgesRemoved/ZFIN_withOC/removedEdges.tsv'
+graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFIN.csv'
+#graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFINedges.csv'
+
+evaluateEmbeddings(graph, edgeFile)
