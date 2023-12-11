@@ -18,7 +18,7 @@ def harmonicCentralityPlot(graph, modelOrgs):
         plt.ylabel('Number of Nodes')
         plt.yscale('log')
         plt.ylim([0,1000000])
-        plt.xlim([0,65000])
+        #plt.xlim([0,65000])
         plt.title('Harmonic Centrality Node Distribution for ' + org)
         plt.show()
     return

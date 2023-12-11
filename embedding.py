@@ -29,7 +29,7 @@ def graphEmbedding(g):
     GraphVisualizer(g).fit_and_plot_all(embedding)
     humanGenes = g.get_node_names_from_node_curie_prefixes(['HGNC'])
     embeddingDF = embedding.get_all_node_embedding()[0]
-    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFIN.csv'
+    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarchWOMGI_edges.csv'
     embeddingDF.to_csv(embeddingOutFile)
 
     simGenes = cosineSimGenes(embeddingDF, humanGenes)
@@ -172,6 +172,7 @@ def evaluateEmbeddings(embedding, removedEdges):
     # get edges predicted to be there
     # calculate how many removed edges are predicted vs not
     #
+    print(notThere)
 
     print(c)
     print(len(scores))
@@ -179,8 +180,10 @@ def evaluateEmbeddings(embedding, removedEdges):
     plt.show()
     return truePos
 
-edgeFile = 'editedMonarchGraphs/graphsEdgesRemoved/ZFIN_withOC/removedEdges.tsv'
-graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFIN.csv'
-#graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFINedges.csv'
+
+edgeFile = 'editedMonarchGraphs/graphsEdgesRemoved/MGI_withOC/removedEdges.tsv'
+graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_SGD.csv'
+graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_SGDedges.csv'
+graph = 'embeddingDeepWalkSkipGramEnsmallenMonarchWOMGI_edges.csv'
 
 evaluateEmbeddings(graph, edgeFile)

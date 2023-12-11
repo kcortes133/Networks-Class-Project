@@ -1,13 +1,15 @@
 from ensmallen import Graph
 import connectionTypes, edgePrediction, graphStats, centralityMeasures, multimodalGCN, embedding
+import graphFunctions
 
-edgeFolder = 'editedMonarchGraphs/graphsEdgesRemoved/ZFIN_withOC/'
+edgeFolder = 'editedMonarchGraphs/graphsEdgesRemoved/MGI_withOC/'
 nodesFolder = 'editedMonarchGraphs/'
 g = Graph.from_csv(
     directed=False,
-    node_path= nodesFolder + 'monarch-kg_nodes_nameChange_withOC.tsv',
-    edge_path= edgeFolder + 'keptEdges.tsv',
-    node_list_separator=',',
+    #node_path= nodesFolder + 'monarch-kg_nodes_nameChange.tsv',
+    node_path= 'monarch-kg_nodes.tsv',
+    edge_path= edgeFolder + 'resEdges.tsv',
+    node_list_separator='\t',
     verbose=True,
     nodes_column='id',
     node_list_node_types_column='category',
@@ -18,7 +20,14 @@ g = Graph.from_csv(
     name='Monarch KG'
 )
 
-g = g.remove_singleton_nodes()
+#g = g.remove_singleton_nodes()
+#singletonNodes = g.get_singleton_node_ids()
+#graphFunctions.removeTrueSingletonNodes(singletonNodes)
+
+# remove true singleton nodes
+# get singleton node names
+# check if not in the removed edges file
+# remove if not in removed edges file
 edgeTypes = g.get_unique_edge_type_names()
 nodeTypes = g.get_unique_node_type_names()
 allNodeIDs = g.get_node_ids()
@@ -50,8 +59,8 @@ nodeDegrees = g.get_node_degrees
 #                      'biolink:Gene:PomBase', 'biolink:Gene:dictyBase']
 # removed : 'biolink:Gene:ZFIN','biolink:Gene:SGD',
 modelOrgsNodeNames = ['biolink:Gene:ZFIN', 'biolink:Gene:Xenbase', 'biolink:Gene:WB', 'biolink:Gene:RGD', 'biolink:Gene:MGI', 'biolink:Gene:FB',
-                      'biolink:Gene:dictyBase', 'biolink:Gene:PomBase','biolink:Gene:SGD']
-modelOrgs = ['Xenbase', 'WB', 'ZFIN', 'RGD', 'MGI', 'FB', 'PomBase', 'dictyBase', 'SGD']
+                      'biolink:Gene:dictyBase', 'biolink:Gene:PomBase','biolink:Gene:SGD', 'biolink:Gene:HGNC', 'biolink:Gene:NCBIGene']
+modelOrgs = ['Xenbase', 'WB', 'ZFIN', 'RGD', 'MGI', 'FB', 'PomBase', 'dictyBase', 'SGD', 'HGNC', 'NCBIGene']
 
 # compute eccentricity for each node
 # count how many times a node shows up in the paths
@@ -82,7 +91,6 @@ modelOrgs = ['Xenbase', 'WB', 'ZFIN', 'RGD', 'MGI', 'FB', 'PomBase', 'dictyBase'
 #edgePrediction.pickEmbedding(g)
 
 df, cosSims = embedding.graphEmbedding(g)
-embedding.embeddingResults(df, cosSims, g)
 
 #g.get_edge_prediction_metrics()
 
@@ -90,3 +98,8 @@ embedding.embeddingResults(df, cosSims, g)
 #embeddingFile = 'embeddingDeepWalkSkipGramEnsmallen.csv'
 #embeddingDF = embedding.loadEmbedding(embeddingFile)
 #topGenes = embedding.getTopGenes(embeddingDF, g)
+edgeFile = 'editedMonarchGraphs/graphsEdgesRemoved/SGD_withOC/removedEdges.tsv'
+graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_SGD.csv'
+#graph = 'embeddingDeepWalkSkipGramEnsmallenMonarch_edited_WO_ZFINedges.csv'
+
+#embedding.evaluateEmbeddings(graph, edgeFile)

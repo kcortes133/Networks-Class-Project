@@ -9,8 +9,8 @@ from ensmallen.datasets import get_graph_okapi_tfidf_weighted_textual_embedding
 from grape.edge_prediction import PerceptronEdgePrediction
 from embiggen.embedders.ensmallen_embedders import FirstOrderLINEEnsmallen
 from grape import GraphVisualizer
-from embiggen.embedders.ensmallen_embedders import DeepWalkGloVeEnsmallen, DeepWalkSkipGramEnsmallen
-from embiggen.embedders.ensmallen_embedders import TransEEnsmallen, LaplacianEigenmapsEnsmallen, ScoreSPINE, Node2VecCBOWEnsmallen
+from embiggen.embedders.ensmallen_embedders import DeepWalkSkipGramEnsmallen
+from embiggen.embedders.ensmallen_embedders import TransEEnsmallen, ScoreSPINE, Node2VecCBOWEnsmallen
 
 def getGeneMappings():
     mappingsF = 'http://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/archive/quarterly/tsv/hgnc_complete_set_2022-04-01.txt'

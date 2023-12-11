@@ -146,3 +146,6 @@ scratch.py
 graphs
 figures
 monarch-kg.tar.gz
+expirements/figures
+expirements/monarch*
+
