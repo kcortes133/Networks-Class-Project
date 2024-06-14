@@ -20,7 +20,8 @@ def getGeneMappings():
     mappingDB = pd.read_csv(mappingsF, sep='\t')
     return mappingDB[['hgnc_id', 'symbol']]
 
-def graphEmbedding(g):
+
+def graphEmbedding(g, embeddingOutFile):
     embedding = DeepWalkSkipGramEnsmallen().fit_transform(g)
     visualizer = GraphVisualizer(g)
     visualizer.fit_nodes(embedding)
@@ -29,7 +30,6 @@ def graphEmbedding(g):
     GraphVisualizer(g).fit_and_plot_all(embedding)
     humanGenes = g.get_node_names_from_node_curie_prefixes(['HGNC'])
     embeddingDF = embedding.get_all_node_embedding()[0]
-    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarchWOMGI_edges.csv'
     embeddingDF.to_csv(embeddingOutFile)
 
     simGenes = cosineSimGenes(embeddingDF, humanGenes)

@@ -1,74 +1,88 @@
+# Author: Katherina Cortes
+# Date: 5/23/2024
+# Purpose: remove nodes of specified types from Monarch KG, as well as random edges for
+#   testing
 import csv
 import random
 
-def removeSpecifiedNodeTypes(mNodesF, keepNodeTypes):
-    modelOrganisms = set()
+
+###
+# remove nodes of nonspecified types
+# @param mNodesF: file of all nodes in graph
+# @param keepNodeTypes: list of node types to keep in new graph
+# @param excludeModeOrganismType: list of model organisms to exclude
+# @returns set of node names in new graph
+# @outputs a file of nodes in new graph with their metadata
+###
+def removeSpecifiedNodeTypes(mNodesF, newNodesF, keepNodeTypes, excludeModelOrganismType):
     newF = []
     nodes = []
-    notMO = []
-    notMO = ['MGI']
     allNodeNames = []
-    nodeNames = []
-    otherNodes = ['biolink:PhenotypicFeature', 'biolink:Disease', 'biolink:OntologyClass']
     with open(mNodesF, 'r', encoding='utf8') as f:
         rd = csv.reader(f, delimiter='\t')
         c =0
         for row in rd:
             allNodeNames.append(row[0])
+            # keep column headings
             if c ==0:
                 newF.append(row)
+
             # only keep model organism nodes
-            if row[1] =='biolink:Gene' and row[0].split(':')[0] not in notMO:
-                newF.append(row)
-                nodes.append(row[0])
-                modelOrganisms.add(row[0].split(':')[0])
-            c+=1
-            if row[1] in otherNodes:
+            # exclude specified model organism(s)
+            if row[1] =='biolink:Gene' and row[0].split(':')[0] not in excludeModelOrganismType:
                 newF.append(row)
                 nodes.append(row[0])
 
-    with open('monarch-kg_nodes_all_edited_wO_MGI.tsv', 'w', encoding='utf8', newline='') as of:
+            # keep other specified node types
+            if row[1] in keepNodeTypes:
+                newF.append(row)
+                nodes.append(row[0])
+
+            c+=1
+
+    # write new nodes and metadata to specified file as tsv
+    with open(newNodesF, 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(newF)
 
     return set(nodes)
 
-def readEdges(edgesF, nodeNames):
+
+###
+# keep only edges connected to two nodes still in new graph
+# remove floating edges
+# @param edgesF: file containing all edges from originl graph
+# @param newEdgesF: file to put edges for new graph
+# @param nodeNames: list of node names in new graph
+# @output newEdgesF: file of new edges and metadata
+###
+def removeExtraEdges(edgesF, newEdgesF, nodeNames):
     with open(edgesF, 'r', encoding='utf8') as f:
         rd = csv.reader(f, delimiter='\t')
         c = 0
         newEdges = []
-        edgeNodeNames = []
-        sourceNodes = []
-        desNodes = []
         for row in rd:
+            # keep edge file header
             if c ==0:
                 newEdges.append(row)
-            # source and destination must be present
+            # source and destination nodes must both be present
             if row[19] in nodeNames and row[18] in nodeNames:
-                edgeNodeNames.append(row[19])
-                edgeNodeNames.append(row[18])
-                sourceNodes.append(row[19])
-                desNodes.append(row[18])
                 newEdges.append(row)
             c +=1
-    print(len(newEdges))
-    print(len(nodeNames))
 
-    for node in edgeNodeNames:
-        if node not in nodeNames:
-            print('NOPE')
-
-
-    with open('monarch-kg_edges_all_edited_withO_MGI.tsv', 'w', encoding='utf8', newline='') as of:
+    # print kept edges to file
+    with open(newEdgesF, 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(newEdges)
     return
 
 
-def change_node_types():
+# change node names to reflect model organism
+# @param nodesF: new nodes of specified types from removeSpecifiedNodeTypes()
+# @output newNodeNamesF: file of nodes with new names and metadata
+def change_node_types(nodesF, newNodeNamesF):
     nodes = []
-    with open('monarch-kg_nodes_all_edited_wO_MGI.tsv', 'r', encoding='utf8') as f:
+    with open(nodesF, 'r', encoding='utf8') as f:
         rd = csv.reader(f, delimiter=',')
         c = 0
         for row in rd:
@@ -85,12 +99,20 @@ def change_node_types():
                     nodes.append(row)
             c+=1
 
-    with open('monarch-kg_nodes_nameChange_ALL_woMGI.tsv', 'w', encoding='utf8', newline='') as of:
+    with open(newNodeNamesF, 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(nodes)
     return
 
-def removeRandomEdges(subsetGraphEdges, graphEdgesF, nodeNames):
+
+###
+# @param subsetGraphEdges: file of all edges in new graph
+# @param graphEdgesF: file of all edges in original graph
+# @return
+# @return
+# @return
+###
+def removeRandomEdges(subsetGraphEdges, graphEdgesF):
     # given a graph without a node class
     removedEdges = []
     keptEdges = []
@@ -99,14 +121,10 @@ def removeRandomEdges(subsetGraphEdges, graphEdgesF, nodeNames):
         c = 0
         sourceNodes = []
         desNodes = []
-        m = 0
         for row in rd:
             sourceNodes.append(row[18])
             desNodes.append(row[19])
 
-            if row[18] not in nodeNames or row[19] not in nodeNames:
-                print('missing node')
-                m+=1
             # count number of edges with type interacts_with, associated_with, has_phenotype
             if row[2] == 'biolink:has_phenotype' or row[2] == 'biolink:interacts_with' \
                     or row[2] == 'biolink:associated_with':
@@ -123,43 +141,49 @@ def removeRandomEdges(subsetGraphEdges, graphEdgesF, nodeNames):
             else:
                 keptEdges.append(row)
 
-    print(m)
-    # edit graphs with and without node class to not have list of edges
+    #edit original graph to remove same set of edges for comparison purposes
     graphFile = open(graphEdgesF, 'r')
     graphEdges = list(csv.reader(graphFile, delimiter='\t'))
     graphFile.close()
-    #print(len(graphEdges))
+
     for edge in removedEdges:
         graphEdges.remove(edge)
-    #resEdges = list(filter(lambda i: i not in removedEdges, graphEdges))
-    #print(len(resEdges))
 
-    # keep list of removed edges
-    # output graphs
-    # return list of removed edges
-    #print(len(removedEdges))
+    # list of removed edges
+    # list of new graphs kept edges
+    # list of original graphs kept edges
     return removedEdges, keptEdges, graphEdges
 
 def writeRemovedEdgeFiles(folder, removedE, keptE, resE):
+    # removed edges
     with open(folder+'removedEdges.tsv', 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(removedE)
 
+    # edges kept in new graph
     with open(folder+'keptEdges.tsv', 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(keptE)
 
+    # edges kept in original graph
     with open(folder + 'resEdges.tsv', 'w', encoding='utf8', newline='') as of:
         writer = csv.writer(of)
         writer.writerows(resE)
+    return
+
 
 folder = 'editedMonarchGraphs/'
+kgFolder = 'monarch'
 mEdgesF = 'monarch-kg_edges.tsv'
 mNodesF = 'monarch-kg_nodes.tsv'
-nodeNames = readNodes(mNodesF)
-#readEdges(mEdgesF, nodeNames)
-#change_node_types()
-
+newNodesF = 'monarch-kg_nodes_all_edited_wO_MGI.tsv'
+keepNodes = ['biolink:PhenotypicFeature', 'biolink:Disease', 'biolink:OntologyClass']
+excludeMO = ['MGI']
+nodeNames = removeSpecifiedNodeTypes(mNodesF, newNodesF, keepNodes, excludeMO)
+#newEdgesF = 'monarch-kg_edges_all_edited_withO_MGI.tsv'
+#removeExtraEdges(mEdgesF, newEdgesF, nodeNames)
+#newNodeNamesF = 'monarch-kg_nodes_nameChange_ALL_woMGI.tsv'
+#change_node_types(newNodesF, newNodeNamesF)
 
 # randomly remove edges and keep list of those removed
 # remove edges that are of type
@@ -169,6 +193,7 @@ graph = 'monarch-kg_edges.tsv'
 removedEdges, keptEdges, resEdges = removeRandomEdges(subGraph, graph, nodeNames)
 writeRemovedEdgeFiles(organismFolder, removedEdges, keptEdges, resEdges)
 
+# fix file headers
 def line_prepender(filename, headerF):
     with open(headerF, 'r') as hf:
         header = hf.readline()

@@ -30,8 +30,9 @@ def cosineSimGenes(graph, all_human_genes, disease_curie):
     return cosine_sims_eds_vs_genes
 
 
-def graphEmbedding(g):
-    embedding = DeepWalkSkipGramEnsmallen().fit_transform(g)
+def graphEmbedding(g, embeddingOutFile):
+    #embedding = DeepWalkSkipGramEnsmallen().fit_transform(g)
+    embedding = FirstOrderLINEEnsmallen().fit_transform(g)
     visualizer = GraphVisualizer(g)
     visualizer.fit_nodes(embedding)
     visualizer.plot_node_types()
@@ -39,7 +40,6 @@ def graphEmbedding(g):
     GraphVisualizer(g).fit_and_plot_all(embedding)
     humanGenes = g.get_node_names_from_node_curie_prefixes(['HGNC'])
     embeddingDF = embedding.get_all_node_embedding()[0]
-    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20230503_nosingle.csv'
     embeddingDF.to_csv(embeddingOutFile)
     print(embeddingDF)
 
@@ -95,9 +95,9 @@ def predictions():
         print(gene)
 
 def pickEmbedding(g):
-    embedding = DeepWalkSkipGramEnsmallen().fit_transform(g)
+    embedding = FirstOrderLINEEnsmallen().fit_transform(g)
     embeddingDF = embedding.get_all_node_embedding()[0]
-    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20230503_nosingleDEEpWak.csv'
+    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20231028_nosingleFOLE.csv'
     embeddingDF.to_csv(embeddingOutFile)
     visualizer = GraphVisualizer(g)
     GraphVisualizer(g).fit_and_plot_all(embedding)
@@ -108,7 +108,17 @@ def pickEmbedding(g):
     # has a wider variety of cosine distance
     embedding = TransEEnsmallen().fit_transform(g)
     embeddingDF = embedding.get_all_node_embedding()[0]
-    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20230503_nosingleTransE.csv'
+    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20231028_nosingleTransE.csv'
+    embeddingDF.to_csv(embeddingOutFile)
+    visualizer = GraphVisualizer(g)
+    GraphVisualizer(g).fit_and_plot_all(embedding)
+    plt.show()
+    visualizer.fit_nodes(embedding)
+    visualizer.plot_node_types()
+    plt.show()
+    embedding = ScoreSPINE().fit_transform(g)
+    embeddingDF = embedding.get_all_node_embedding()[0]
+    embeddingOutFile = 'embeddingDeepWalkSkipGramEnsmallenMonarch20231028_nosingleSCORES.csv'
     embeddingDF.to_csv(embeddingOutFile)
     visualizer = GraphVisualizer(g)
     GraphVisualizer(g).fit_and_plot_all(embedding)
@@ -133,9 +143,3 @@ g = Graph.from_csv(
     edge_list_edge_types_column='predicate',
     name='Monarch KG'
 )
-g = g.remove_singleton_nodes()
-print(g)
-#df, cosSims = graphEmbedding(g)
-#pickEmbedding(g)
-
-#predictions()

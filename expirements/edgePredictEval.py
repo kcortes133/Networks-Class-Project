@@ -11,15 +11,15 @@ from grape.embedders import Role2VecKarateClub, GraRepKarateClub
 from embiggen.embedders.ensmallen_embedders import TransEEnsmallen, ScoreSPINE, Node2VecCBOWEnsmallen
 from embiggen.embedders.ensmallen_embedders import FirstOrderLINEEnsmallen
 
-
-from grape.edge_prediction import DecisionTreeEdgePrediction, PerceptronEdgePrediction
+from grape.edge_prediction import DecisionTreeEdgePrediction, PerceptronEdgePrediction, RandomForestEdgePrediction,\
+    ExtraTreesEdgePrediction, MLPEdgePrediction, GradientBoostingEdgePrediction
 
 import pandas as pd
 from tqdm.auto import tqdm, trange
 from ensmallen import Graph
 
 
-folder = 'expirements/monarch11162023/'
+folder = 'expirements/monarch20231028/'
 g = Graph.from_csv(
     directed=False,
     node_path=folder+'monarch-kg_nodes.tsv',
@@ -57,22 +57,30 @@ results = pd.concat([
                 edge_features=None,
                 edge_embeddings="Hadamard"
             ),
+            DecisionTreeEdgePrediction(),
+            RandomForestEdgePrediction(),
+            ExtraTreesEdgePrediction(),
+            MLPEdgePrediction(),
+            GradientBoostingEdgePrediction(),
         ],
-        number_of_holdouts=10,
+        number_of_holdouts=2,
         node_features=EmbeddingMethod(),
         # Right now we have enabled the smoke test to rapidly run and
         # test that everything works. To reproduce the results,
         # do set the smoke test flag to `False`.
-        smoke_test=True,
+        smoke_test=False,
         enable_cache=True
     )
     for EmbeddingMethod in tqdm((
-        Node2VecCBOWEnsmallen, Node2VecGloVeEnsmallen, Node2VecSkipGramEnsmallen,
-        DeepWalkCBOWEnsmallen, DeepWalkGloVeEnsmallen, DeepWalkSkipGramEnsmallen,
-        ScoreSPINE, TransEEnsmallen, FirstOrderLINEEnsmallen,
+        #Node2VecCBOWEnsmallen, Node2VecGloVeEnsmallen, Node2VecSkipGramEnsmallen,
+        #DeepWalkCBOWEnsmallen, DeepWalkGloVeEnsmallen,
+        #DeepWalkSkipGramEnsmallen,
+        ScoreSPINE,
+        TransEEnsmallen,
+        FirstOrderLINEEnsmallen,
         #WalkletsSkipGramEnsmallen,
     ), desc="Running experiment")
 ])
 
 
-results.to_csv('prediction_eval_results11-16-2023.csv')
+results.to_csv('DWSG_part1_prediction_eval_results10-28-2023.csv')

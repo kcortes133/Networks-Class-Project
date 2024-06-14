@@ -55,7 +55,7 @@ with open('expirements\eds_vw_3hop_allNodes.csv', 'r') as f:
     hopNodes = set(lines.strip().split(','))
     print(len(hopNodes))
 
-folder = 'expirements/monarch20230503/'
+folder = 'expirements/monarch20231028/'
 mEdgesF = folder + 'monarch-kg_edges.tsv'
 mNodesF = folder + 'monarch-kg_nodes.tsv'
 nodeNames = readNodes(mNodesF, hopNodes, folder)
